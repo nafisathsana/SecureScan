@@ -1,0 +1,54 @@
+import os
+import time
+import hashlib
+from getpass import getpass
+from plyer import notification
+
+def send_desktop_alert(title, message):
+    notification.notify(
+        title=title,
+        message=message,
+        app_name="File Monitoring Tool",
+        timeout=10  # Notification will be displayed for 10 seconds
+    )
+
+def get_file_hash(file_path):
+    try:
+        md5 = hashlib.md5()
+        with open(file_path, 'rb') as file:
+            while True:
+                data = file.read(8192)
+                if not data:
+                    break
+                md5.update(data)
+        return md5.hexdigest()
+    except Exception as e:
+        print(f"[-] Error calculating hash for {file_path}: {e}")
+        return None
+
+def monitor_directory(directory_path):
+    initial_hashes = {}
+    
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        if os.path.isfile(file_path):
+            initial_hashes[filename] = get_file_hash(file_path)
+    
+    while True:
+        current_hashes = {}
+        
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+            if os.path.isfile(file_path):
+                current_hash = get_file_hash(file_path)
+                if current_hash != initial_hashes.get(filename):
+                    print(f"[+] Change detected in {filename}")
+                    send_desktop_alert("File Monitoring Alert", f"Change detected in {filename}")
+                    initial_hashes[filename] = current_hash
+        
+        time.sleep(10)
+
+if __name__ == "__main__":
+    directory_to_monitor = input("Enter the directory path to monitor: ")
+
+    monitor_directory(directory_to_monitor)
